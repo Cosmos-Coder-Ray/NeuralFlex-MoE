@@ -1,0 +1,280 @@
+# FREE Training Configuration - High Quality, Small Size
+# Following Microsoft Phi-3 approach: Quality > Quantity
+
+# ==========================================
+# FREE TRAINING PLATFORMS
+# ==========================================
+platforms:
+  primary:
+    - name: "Google Colab Pro"
+      gpu: "A100 (40GB)"
+      cost: "FREE (with limits)"
+      hours: "12-24h sessions"
+      
+    - name: "Kaggle"
+      gpu: "P100/T4 (16GB)"
+      cost: "FREE"
+      hours: "30h/week GPU quota"
+      
+    - name: "Lightning AI"
+      gpu: "A10G (24GB)"
+      cost: "FREE tier"
+      hours: "22 GPU hours/month"
+      
+  secondary:
+    - name: "Paperspace Gradient"
+      gpu: "Free GPU"
+      cost: "FREE tier available"
+      
+    - name: "Hugging Face Spaces"
+      gpu: "T4 (16GB)"
+      cost: "FREE (community)"
+
+# ==========================================
+# BASE MODEL - Start Small, High Quality
+# ==========================================
+base_model:
+  primary: "microsoft/Phi-3-mini-4k-instruct"  # 3.8B, excellent quality
+  alternatives:
+    - "microsoft/phi-2"  # 2.7B, very efficient
+    - "TinyLlama/TinyLlama-1.1B-Chat-v1.0"  # 1.1B, fast training
+    - "stabilityai/stablelm-2-1_6b"  # 1.6B, good baseline
+
+# ==========================================
+# HIGH-QUALITY COMPACT DATASETS (Phi-3 Style)
+# Total: ~15GB, 10-20M samples
+# ==========================================
+
+synthetic_textbooks:
+  # Microsoft Phi approach: Synthetic high-quality data
+  - name: "Textbooks Are All You Need"
+    source: "nampdn-ai/tiny-textbooks"
+    size: "400MB"
+    samples: "420K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "Core reasoning, like Phi-1"
+    
+  - name: "Cosmopedia"
+    source: "HuggingFaceTB/cosmopedia"
+    size: "2GB"
+    samples: "30M"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "Synthetic textbooks, web samples"
+
+reasoning_math:
+  - name: "MetaMathQA"
+    source: "meta-math/MetaMathQA"
+    size: "1.5GB"
+    samples: "395K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "Math reasoning with solutions"
+    
+  - name: "Orca-Math"
+    source: "microsoft/orca-math-word-problems-200k"
+    size: "800MB"
+    samples: "200K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "GPT-4 math explanations"
+    
+  - name: "OpenMathInstruct-1"
+    source: "nvidia/OpenMathInstruct-1"
+    size: "1.2GB"
+    samples: "1.8M"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "NVIDIA math dataset"
+    
+  - name: "MATH"
+    source: "hendrycks/math"
+    size: "200MB"
+    samples: "12.5K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "Competition-level math"
+
+science_reasoning:
+  - name: "ScienceQA"
+    source: "derek-thomas/ScienceQA"
+    size: "300MB"
+    samples: "21K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "Multimodal science reasoning"
+    
+  - name: "ARC-Challenge"
+    source: "ai2_arc"
+    size: "50MB"
+    samples: "7.7K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "Science questions"
+    
+  - name: "MMLU-STEM"
+    source: "cais/mmlu"
+    subset: "STEM subjects"
+    size: "100MB"
+    samples: "14K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "Expert-level science"
+
+coding_algorithms:
+  - name: "Magicoder-OSS-Instruct"
+    source: "ise-uiuc/Magicoder-OSS-Instruct-75K"
+    size: "500MB"
+    samples: "75K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "High-quality code generation"
+    
+  - name: "Evol-CodeAlpaca"
+    source: "theblackcat102/evol-codealpaca-v1"
+    size: "300MB"
+    samples: "110K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "Evolved code instructions"
+    
+  - name: "CodeFeedback-Filtered"
+    source: "m-a-p/CodeFeedback-Filtered-Instruction"
+    size: "400MB"
+    samples: "66K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "Code with feedback"
+    
+  - name: "LeetCode-Solutions"
+    source: "greengerong/leetcode"
+    size: "100MB"
+    samples: "2.5K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "Algorithm problems"
+
+medical_health:
+  - name: "MedQA-USMLE"
+    source: "bigbio/med_qa"
+    size: "200MB"
+    samples: "12K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "Medical exam questions"
+    
+  - name: "PubMedQA"
+    source: "pubmed_qa"
+    size: "50MB"
+    samples: "1K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "Biomedical reasoning"
+    
+  - name: "MedInstruct"
+    source: "axiong/pmc_llama_instructions"
+    size: "300MB"
+    samples: "100K"
+    quality: "⭐⭐⭐⭐"
+    purpose: "Medical instructions"
+
+instruction_following:
+  - name: "Alpaca-GPT4"
+    source: "vicgalle/alpaca-gpt4"
+    size: "200MB"
+    samples: "52K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "GPT-4 instructions"
+    
+  - name: "Dolly-15K"
+    source: "databricks/databricks-dolly-15k"
+    size: "50MB"
+    samples: "15K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "Human-written, diverse"
+    
+  - name: "OpenOrca-Filtered"
+    source: "Open-Orca/OpenOrca"
+    subset: "Top 100K by quality"
+    size: "1GB"
+    samples: "100K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "GPT-4 explanations"
+
+reasoning_cot:
+  - name: "CoT-Collection-Filtered"
+    source: "kaist-ai/CoT-Collection"
+    subset: "High-quality subset"
+    size: "2GB"
+    samples: "200K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "Chain-of-thought reasoning"
+    
+  - name: "FLAN-CoT"
+    source: "conceptofmind/FLAN_2022"
+    subset: "CoT tasks"
+    size: "1GB"
+    samples: "100K"
+    quality: "⭐⭐⭐⭐⭐"
+    purpose: "Diverse reasoning tasks"
+
+# ==========================================
+# TRAINING STRATEGY - FREE PLATFORMS
+# ==========================================
+training_phases:
+  phase1_weight_transfer:
+    platform: "Google Colab (Free)"
+    duration: "2 hours"
+    cost: "FREE"
+    base: "microsoft/Phi-3-mini-4k-instruct"
+    
+  phase2_quality_pretraining:
+    platform: "Kaggle (30h/week)"
+    duration: "2-3 weeks"
+    cost: "FREE"
+    datasets:
+      - "Cosmopedia (2GB)"
+      - "MetaMathQA (1.5GB)"
+      - "Magicoder (500MB)"
+      - "OpenOrca-Filtered (1GB)"
+    total_size: "5GB"
+    samples: "~1M high-quality"
+    
+  phase3_specialized_finetuning:
+    platform: "Lightning AI (22h/month)"
+    duration: "1 week"
+    cost: "FREE"
+    datasets:
+      - "Orca-Math (800MB)"
+      - "Alpaca-GPT4 (200MB)"
+      - "Evol-CodeAlpaca (300MB)"
+      - "MedQA (200MB)"
+    total_size: "1.5GB"
+    samples: "~400K specialized"
+    
+  phase4_reasoning_enhancement:
+    platform: "Google Colab Pro (Free tier)"
+    duration: "3 days"
+    cost: "FREE"
+    datasets:
+      - "CoT-Collection-Filtered (2GB)"
+      - "OpenMathInstruct (1.2GB)"
+    total_size: "3.2GB"
+    samples: "~2M reasoning"
+
+# ==========================================
+# TOTAL DATASET SIZE: ~15GB (vs 1TB+ for others)
+# TOTAL SAMPLES: ~5M (vs 1B+ for others)
+# TOTAL COST: $0 (FREE)
+# TRAINING TIME: 4-5 weeks
+# ==========================================
+
+optimization:
+  model_size: "3B parameters"
+  quantization: "4-bit QLoRA"
+  gradient_checkpointing: true
+  mixed_precision: "bf16"
+  batch_size: 1
+  gradient_accumulation: 16
+  lora_r: 64
+  lora_alpha: 128
+  target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
+
+# ==========================================
+# EXPECTED PERFORMANCE (Phi-3 Quality)
+# ==========================================
+targets:
+  MMLU: 0.70  # Phi-3-mini: 69%
+  GSM8K: 0.75  # Phi-3-mini: 82%
+  HumanEval: 0.60  # Phi-3-mini: 59%
+  HellaSwag: 0.75
+  TruthfulQA: 0.60
+  model_size: "3B parameters"
+  inference_speed: "200+ tokens/sec"
+  memory_usage: "6GB VRAM"

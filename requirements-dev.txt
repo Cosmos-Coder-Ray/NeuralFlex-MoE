@@ -1,0 +1,33 @@
+# Development requirements
+# Install with: pip install -r requirements-dev.txt
+
+-r requirements.txt
+
+# Development tools
+ipython
+jupyter
+notebook
+jupyterlab
+
+# Testing
+pytest-xdist
+pytest-mock
+pytest-asyncio
+hypothesis
+
+# Documentation
+sphinx
+sphinx-rtd-theme
+autodoc
+myst-parser
+
+# Linting and formatting
+pylint
+flake8
+isort
+autopep8
+
+# Type checking
+types-requests
+types-PyYAML
+types-setuptools

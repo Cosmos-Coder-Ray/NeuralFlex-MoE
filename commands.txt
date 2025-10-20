@@ -1,0 +1,23 @@
+venv\scripts\activate
+
+
+# ===== WSL Ubuntu Setup (Full Features) =====
+
+# 1. Navigate to project in WSL
+cd /mnt/c/Users/rstiw/Desktop/AURA/NeuralFlex-MoE
+
+# 2. Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 3. Upgrade pip
+pip install --upgrade pip
+
+# 4. Install PyTorch with CUDA
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# 5. Install all requirements
+pip install -r requirements.txt
+
+# If DeepSpeed fails, try:
+pip install deepspeed --no-build-isolation

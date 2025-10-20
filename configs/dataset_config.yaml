@@ -1,0 +1,206 @@
+# Dataset Configuration for NeuralFlex-MoE
+
+# ==========================================
+# PHASE 1: Weight Transfer
+# ==========================================
+base_model:
+  primary: "mistralai/Mistral-7B-v0.1"  # RECOMMENDED
+  alternatives:
+    - "Qwen/Qwen2-7B"
+    - "microsoft/Phi-3-mini-4k-instruct"  # For 3B variant
+    - "meta-llama/Llama-2-7b-hf"
+
+# ==========================================
+# PHASE 2: Pretraining Datasets (60% general, 20% code, 10% math, 10% instruction)
+# ==========================================
+pretraining:
+  general_knowledge:
+    - name: "RedPajama-Data-v2"
+      source: "togethercomputer/RedPajama-Data-V2"
+      weight: 0.30
+      tokens: "30T"
+      
+    - name: "RefinedWeb"
+      source: "tiiuae/falcon-refinedweb"
+      weight: 0.15
+      tokens: "5T"
+      
+    - name: "C4"
+      source: "allenai/c4"
+      weight: 0.10
+      tokens: "750B"
+      
+    - name: "Wikipedia"
+      source: "wikipedia"
+      config: "20231101.en"
+      weight: 0.05
+      tokens: "20B"
+
+  code:
+    - name: "The Stack v2"
+      source: "bigcode/the-stack-v2"
+      weight: 0.12
+      tokens: "3T"
+      
+    - name: "StarCoder Data"
+      source: "bigcode/starcoderdata"
+      weight: 0.08
+      tokens: "250B"
+
+  math_reasoning:
+    - name: "OpenWebMath"
+      source: "open-web-math/open-web-math"
+      weight: 0.06
+      tokens: "14.7B"
+      
+    - name: "MATH"
+      source: "hendrycks/math"
+      weight: 0.02
+      
+    - name: "MetaMathQA"
+      source: "meta-math/MetaMathQA"
+      weight: 0.02
+
+  instruction:
+    - name: "Orca"
+      source: "Open-Orca/OpenOrca"
+      weight: 0.06
+      
+    - name: "UltraChat"
+      source: "stingning/ultrachat"
+      weight: 0.04
+
+# ==========================================
+# PHASE 3: Fine-tuning Datasets
+# ==========================================
+finetuning:
+  instruction_following:
+    - name: "Alpaca-GPT4"
+      source: "vicgalle/alpaca-gpt4"
+      samples: 52000
+      
+    - name: "Dolly-15K"
+      source: "databricks/databricks-dolly-15k"
+      samples: 15000
+      
+    - name: "OpenAssistant"
+      source: "OpenAssistant/oasst1"
+      samples: 161000
+
+  reasoning_cot:
+    - name: "CoT Collection"
+      source: "kaist-ai/CoT-Collection"
+      samples: 1840000
+      
+    - name: "Orca-Math"
+      source: "microsoft/orca-math-word-problems-200k"
+      samples: 200000
+      
+    - name: "PRM800K"
+      source: "openai/prm800k"
+      samples: 800000
+
+  code_generation:
+    - name: "Code Alpaca"
+      source: "sahil2801/CodeAlpaca-20k"
+      samples: 20000
+      
+    - name: "Evol-Instruct-Code"
+      source: "nickrosh/Evol-Instruct-Code-80k-v1"
+      samples: 80000
+      
+    - name: "Magicoder"
+      source: "ise-uiuc/Magicoder-OSS-Instruct-75K"
+      samples: 75000
+
+  safety_alignment:
+    - name: "HH-RLHF"
+      source: "Anthropic/hh-rlhf"
+      samples: 160000
+      
+    - name: "PKU-SafeRLHF"
+      source: "PKU-Alignment/PKU-SafeRLHF"
+      samples: 330000
+
+# ==========================================
+# PHASE 4: Novel Feature Datasets
+# ==========================================
+novel_features:
+  uncertainty_aware_generation:
+    - name: "TruthfulQA"
+      source: "truthful_qa"
+      purpose: "Test hallucination reduction"
+      
+    - name: "SelfAware"
+      source: "selfaware/selfaware"
+      purpose: "Model uncertainty calibration"
+
+  adaptive_reasoning:
+    - name: "GSM8K"
+      source: "gsm8k"
+      purpose: "Multi-step math reasoning"
+      
+    - name: "StrategyQA"
+      source: "strategy_qa"
+      purpose: "Multi-hop reasoning"
+      
+    - name: "ARC-Challenge"
+      source: "ai2_arc"
+      config: "ARC-Challenge"
+      purpose: "Science reasoning"
+
+  continuous_learning:
+    - name: "StreamingQA"
+      source: "streaming_qa"
+      purpose: "Temporal adaptation"
+
+# ==========================================
+# Evaluation Benchmarks
+# ==========================================
+evaluation:
+  - name: "MMLU"
+    source: "cais/mmlu"
+    target: 0.75
+    
+  - name: "HellaSwag"
+    source: "hellaswag"
+    target: 0.85
+    
+  - name: "HumanEval"
+    source: "openai_humaneval"
+    target: 0.75
+    
+  - name: "GSM8K"
+    source: "gsm8k"
+    target: 0.80
+    
+  - name: "TruthfulQA"
+    source: "truthful_qa"
+    target: 0.65
+    
+  - name: "BBH"
+    source: "lukaemon/bbh"
+    target: 0.70
+
+# ==========================================
+# Training Schedule
+# ==========================================
+training_schedule:
+  phase1_weight_transfer:
+    duration: "1 day"
+    cost: "$50"
+    
+  phase2_pretraining:
+    duration: "2-4 weeks"
+    tokens: "100B-500B"
+    cost: "$500-2000"
+    
+  phase3_finetuning:
+    duration: "3-7 days"
+    samples: "500K-2M"
+    cost: "$100-300"
+    
+  phase4_alignment:
+    duration: "2-3 days"
+    method: "DPO/RLHF"
+    cost: "$50-100"

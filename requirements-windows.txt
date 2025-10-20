@@ -1,0 +1,109 @@
+# NeuralFlex-MoE Requirements (Windows Compatible)
+# Python 3.11+ required
+
+# Core Deep Learning Frameworks
+torch
+torchvision
+torchaudio
+transformers
+accelerate
+# deepspeed - Not supported on Windows, use alternatives
+bitsandbytes-windows  # Windows-compatible version
+
+# Model Development Libraries
+einops
+# flash-attn - Requires Linux/WSL
+# xformers - Install separately: pip install xformers (pre-built wheels available)
+# triton - Linux only
+fairscale
+# colossalai - Limited Windows support
+peft
+trl
+
+# Data Processing & Augmentation
+datasets
+tokenizers
+langchain
+chromadb
+faiss-cpu
+pinecone-client
+weaviate-client
+redis
+elasticsearch
+haystack-ai
+docarray
+sentencepiece
+tiktoken
+pyarrow
+polars
+# vaex - Limited Windows support
+cleanlab
+nlpaug
+textstat
+language-tool-python
+
+# Optimization & Quantization
+onnx
+onnxruntime-gpu
+quanto
+auto-gptq
+llama-cpp-python
+
+# Experiment Tracking & Analysis
+wandb
+tensorboard
+mlflow
+aim
+neptune
+
+# Code Analysis & Profiling
+# py-spy - Limited Windows support
+# scalene - Limited Windows support
+# memray - Linux only
+torch-tb-profiler
+# nvitop - Limited Windows support
+
+# Code Quality & Development Tools
+black
+ruff
+isort
+flake8
+autoflake
+pip-tools
+mypy
+pytest
+pytest-cov
+pre-commit
+
+# Debugging & Visualization
+ipywidgets
+plotly
+seaborn
+# grad-cam
+bertviz
+matplotlib
+
+# API & Deployment
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+
+# Additional Utilities
+numpy
+scipy
+pandas
+scikit-learn
+tqdm
+pyyaml
+jsonlines
+h5py
+safetensors
+huggingface-hub
+omegaconf
+hydra-core
+typing-extensions
+packaging
+filelock
+rich
+click

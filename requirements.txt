@@ -1,0 +1,138 @@
+# NeuralFlex-MoE Requirements
+# Python 3.11+ required
+
+# ==========================================
+# Core Deep Learning Frameworks
+# ==========================================
+torch
+torchvision
+torchaudio
+transformers
+accelerate
+deepspeed
+bitsandbytes
+
+# JAX Alternative (for TPU support) - uncomment if needed
+# jax[cuda12_pip]==0.4.25
+flax
+optax
+
+# ==========================================
+# Model Development Libraries
+# ==========================================
+einops           # Tensor operations
+flash-attn         # Flash Attention 2
+xformers          # Memory efficient transformers
+triton             # GPU kernel compiler
+# apex                     # NVIDIA mixed precision (install separately)
+fairscale         # Model parallelism
+colossalai          # Distributed training
+peft              # Parameter efficient fine-tuning
+trl                 # Reinforcement learning
+unsloth       # 2x faster training (install from source)
+
+# ==========================================
+# Data Processing & Augmentation
+# ==========================================
+datasets
+tokenizers
+langchain      # LLM chain of thought
+
+chromadb                # Vector database for embeddings
+faiss-cpu               # FAISS vector search index
+faiss-gpu               # FAISS vector search index with GPU support
+pinecone-client         # Pinecone vector database client
+weaviate-client         # Weaviate vector database client
+redis                   # Redis vector database client
+elasticsearch           # Elasticsearch vector database client
+haystack                # Haystack framework for retrieval-augmented generation (RAG)
+docarray                #
+sentencepiece
+tiktoken
+pyarrow
+polars           # Fast dataframe operations
+vaex              # Out-of-core dataframes
+cleanlab           # Data quality
+nlpaug            # Text augmentation
+textstat           # Text statistics
+language-tool-python  # Grammar checking
+
+# ==========================================
+# Optimization & Quantization
+# ==========================================
+onnx
+onnxruntime-gpu
+# tensorrt==10.0.0         # Install separately based on CUDA version
+# torch-tensorrt==2.2.0    # Install separately based on CUDA version
+quanto              # Quantization toolkit
+auto-gptq        # GPTQ quantization
+# awq==0.1.0               # Activation-aware quantization
+llama-cpp-python   # GGUF format support
+
+# ==========================================
+# Experiment Tracking & Analysis
+# ==========================================
+wandb
+tensorboard
+mlflow
+aim
+neptune-client
+
+# Code Analysis & Profiling
+py-spy             # Python profiler
+scalene          # GPU/CPU/memory profiler
+memray            # Memory profiler
+torch-tb-profiler  # PyTorch profiler
+nvitop             # NVIDIA GPU monitoring
+
+# ==========================================
+# Code Quality & Development Tools
+# ==========================================
+black
+ruff
+isort
+flake8
+autoflake
+pip-tools       # Dependency management
+nbdev           # Jupyter notebook development
+mypy
+pytest
+pytest-cov
+pre-commit
+
+# Debugging & Visualization
+ipywidgets
+plotly
+seaborn
+grad-cam        # Attention visualization
+bertviz             # Transformer visualization
+matplotlib
+
+# ==========================================
+# API & Deployment
+# ==========================================
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+
+# ==========================================
+# Additional Utilities
+# ==========================================
+numpy
+scipy
+pandas
+scikit-learn
+tqdm
+pyyaml
+jsonlines
+h5py
+safetensors
+huggingface-hub
+omegaconf
+hydra-core
+typing-extensions
+packaging
+filelock
+rich
+click

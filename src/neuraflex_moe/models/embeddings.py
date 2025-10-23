@@ -48,14 +48,15 @@ class NeuralFlexEmbedding(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.token_embedding = nn.Embedding(config["vocab_size"], config["base_hidden_size"])
-        self.rotary_emb = RotaryEmbedding(
-            config["base_hidden_size"] // config["num_attention_heads"],
-            max_position_embeddings=config["max_position_embeddings"],
-            base=config["rope_theta"]
-        )
         self.dropout = nn.Dropout(config.get("hidden_dropout_prob", 0.1))
         
-    def forward(self, input_ids):
-        embeddings = self.token_embedding(input_ids)
+    def forward(self, input_ids, vision_embeddings=None):
+        text_embeddings = self.token_embedding(input_ids)
+        if vision_embeddings is not None:
+            # This is a placeholder for a more sophisticated fusion method.
+            # We are simply adding the vision embeddings to the text embeddings.
+            embeddings = text_embeddings + vision_embeddings
+        else:
+            embeddings = text_embeddings
         embeddings = self.dropout(embeddings)
         return embeddings

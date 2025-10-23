@@ -9,10 +9,12 @@ import bitsandbytes as bnb
 from typing import Optional, Dict
 import wandb
 from tqdm import tqdm
+import os
 
+from ..core.self_organizing_pathways import SelfOrganizingPathways
 
 class NeuralFlexTrainer:
-    """Custom trainer for NeuralFlex-MoE with MoE-specific optimizations"""
+    """Custom trainer for NeuralFlex-MoE with MoE-specific optimizations and SONP"""
     
     def __init__(
         self,
@@ -21,6 +23,7 @@ class NeuralFlexTrainer:
         eval_dataset,
         tokenizer,
         config: Dict,
+        data_collator,
         output_dir: str = "./outputs"
     ):
         self.model = model
@@ -29,6 +32,7 @@ class NeuralFlexTrainer:
         self.tokenizer = tokenizer
         self.config = config
         self.output_dir = output_dir
+        self.data_collator = data_collator
         
         # Initialize accelerator
         self.accelerator = Accelerator(
@@ -36,6 +40,13 @@ class NeuralFlexTrainer:
             gradient_accumulation_steps=config.get("gradient_accumulation_steps", 8),
         )
         
+        # Initialize SONP
+        if self.config.get("sonp_enabled", False):
+            self.sonp = SelfOrganizingPathways(config.get("sonp_config", {}))
+            self.sonp_update_frequency = self.config.get("sonp_update_frequency", 100)
+        else:
+            self.sonp = None
+
         # Setup optimizer
         self.optimizer = self._setup_optimizer()
         self.scheduler = self._setup_scheduler()
@@ -45,8 +56,8 @@ class NeuralFlexTrainer:
             self.accelerator.prepare(
                 self.model,
                 self.optimizer,
-                DataLoader(train_dataset, batch_size=config.get("micro_batch_size", 2)),
-                DataLoader(eval_dataset, batch_size=config.get("micro_batch_size", 2))
+                DataLoader(train_dataset, batch_size=config.get("micro_batch_size", 2), collate_fn=self.data_collator),
+                DataLoader(eval_dataset, batch_size=config.get("micro_batch_size", 2), collate_fn=self.data_collator)
             )
         
         # Enable gradient checkpointing
@@ -79,50 +90,62 @@ class NeuralFlexTrainer:
             T_max=self.config.get("total_steps", 100000),
             eta_min=self.config.get("learning_rate", 3e-4) * 0.1
         )
-    
+
+    def _sonp_step(self):
+        """Perform a Self-Organizing Neural Pathways update step."""
+        if self.sonp is None or not self.sonp.enabled:
+            return
+
+        unwrapped_model = self.accelerator.unwrap_model(self.model)
+
+        # Prune underutilized pathways
+        pruned_count = self.sonp.prune_pathways(unwrapped_model)
+        if pruned_count > 0 and self.accelerator.is_main_process:
+            print(f"[SONP] Pruned {pruned_count} pathways.")
+            wandb.log({"sonp/pruned_count": pruned_count}, step=self.global_step)
+
+        # Grow new pathways where gradients are high
+        grown_count = self.sonp.grow_pathways(unwrapped_model)
+        if grown_count > 0 and self.accelerator.is_main_process:
+            print(f"[SONP] Grew {grown_count} new pathways.")
+            wandb.log({"sonp/grown_count": grown_count}, step=self.global_step)
+
     def train_step(self, batch) -> Dict[str, float]:
         """Single training step"""
         self.model.train()
         
-        input_ids = batch["input_ids"]
-        attention_mask = batch.get("attention_mask", None)
-        labels = batch.get("labels", input_ids)
-        
         # Forward pass
-        outputs = self.model(
-            input_ids=input_ids,
-            attention_mask=attention_mask
-        )
-        
-        logits = outputs["logits"]
-        aux_loss = outputs.get("aux_loss", 0.0)
-        
-        # Compute loss
-        shift_logits = logits[..., :-1, :].contiguous()
-        shift_labels = labels[..., 1:].contiguous()
-        
-        loss_fct = nn.CrossEntropyLoss()
-        lm_loss = loss_fct(
-            shift_logits.view(-1, shift_logits.size(-1)),
-            shift_labels.view(-1)
-        )
-        
-        # Add auxiliary loss from MoE
-        total_loss = lm_loss + 0.01 * aux_loss
-        
-        # Backward pass
-        self.accelerator.backward(total_loss)
-        
-        # Gradient clipping
-        if self.accelerator.sync_gradients:
-            self.accelerator.clip_grad_norm_(
-                self.model.parameters(),
-                self.config.get("max_grad_norm", 1.0)
+        with self.accelerator.accumulate(self.model):
+            outputs = self.model(**batch)
+            logits = outputs["logits"]
+            aux_loss = outputs.get("aux_loss", 0.0)
+            
+            # Compute loss
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_labels = batch["labels"][..., 1:].contiguous()
+            
+            loss_fct = nn.CrossEntropyLoss()
+            lm_loss = loss_fct(
+                shift_logits.view(-1, shift_logits.size(-1)),
+                shift_labels.view(-1)
             )
-        
-        self.optimizer.step()
-        self.scheduler.step()
-        self.optimizer.zero_grad()
+            
+            # Add auxiliary loss from MoE
+            total_loss = lm_loss + self.config.get("moe_aux_loss_coeff", 0.01) * aux_loss
+            
+            # Backward pass
+            self.accelerator.backward(total_loss)
+            
+            # Gradient clipping
+            if self.accelerator.sync_gradients:
+                self.accelerator.clip_grad_norm_(
+                    self.model.parameters(),
+                    self.config.get("max_grad_norm", 1.0)
+                )
+            
+            self.optimizer.step()
+            self.scheduler.step()
+            self.optimizer.zero_grad()
         
         return {
             "loss": lm_loss.item(),
@@ -136,19 +159,11 @@ class NeuralFlexTrainer:
         self.model.eval()
         
         with torch.no_grad():
-            input_ids = batch["input_ids"]
-            attention_mask = batch.get("attention_mask", None)
-            labels = batch.get("labels", input_ids)
-            
-            outputs = self.model(
-                input_ids=input_ids,
-                attention_mask=attention_mask
-            )
-            
+            outputs = self.model(**batch)
             logits = outputs["logits"]
             
             shift_logits = logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous()
+            shift_labels = batch["labels"][..., 1:].contiguous()
             
             loss_fct = nn.CrossEntropyLoss()
             loss = loss_fct(
@@ -164,51 +179,65 @@ class NeuralFlexTrainer:
                 "perplexity": perplexity.item()
             }
     
-    def train(self):
+    def train(self, resume_from_checkpoint: Optional[str] = None):
         """Main training loop"""
         total_steps = self.config.get("total_steps", 100000)
         eval_steps = self.config.get("eval_steps", 500)
         save_steps = self.config.get("save_steps", 1000)
-        
-        global_step = 0
-        
+        self.global_step = 0
+
+        if resume_from_checkpoint:
+            try:
+                training_state = torch.load(os.path.join(resume_from_checkpoint, "training_state.pt"))
+                self.global_step = training_state['step']
+                self.optimizer.load_state_dict(training_state['optimizer'])
+                self.scheduler.load_state_dict(training_state['scheduler'])
+                self.accelerator.load_state(os.path.join(resume_from_checkpoint, "accelerator_state"))
+                print(f"Resumed from step: {self.global_step}")
+            except FileNotFoundError:
+                print(f"Warning: Checkpoint training state not found at {resume_from_checkpoint}. Starting from scratch.")
+
         progress_bar = tqdm(
-            total=total_steps,
+            initial=self.global_step, total=total_steps,
             disable=not self.accelerator.is_main_process,
             desc="Training"
         )
         
-        while global_step < total_steps:
+        while self.global_step < total_steps:
             for batch in self.train_dataloader:
                 # Training step
                 metrics = self.train_step(batch)
                 
-                global_step += 1
+                self.global_step += 1
                 progress_bar.update(1)
                 
                 # Log metrics
-                if self.accelerator.is_main_process and global_step % 10 == 0:
-                    wandb.log(metrics, step=global_step)
+                if self.accelerator.is_main_process and self.global_step % 10 == 0:
+                    wandb.log(metrics, step=self.global_step)
                     progress_bar.set_postfix(metrics)
                 
                 # Evaluation
-                if global_step % eval_steps == 0:
+                if self.global_step % eval_steps == 0:
                     eval_metrics = self.evaluate()
                     if self.accelerator.is_main_process:
-                        wandb.log(eval_metrics, step=global_step)
-                        print(f"\nEval at step {global_step}: {eval_metrics}")
+                        wandb.log(eval_metrics, step=self.global_step)
+                        print(f"\nEval at step {self.global_step}: {eval_metrics}")
                 
+                # SONP Step
+                if self.sonp and self.global_step % self.sonp_update_frequency == 0:
+                    self._sonp_step()
+
                 # Save checkpoint
-                if global_step % save_steps == 0:
-                    self.save_checkpoint(global_step)
+                if self.global_step % save_steps == 0:
+                    self.save_checkpoint(self.global_step)
                 
-                if global_step >= total_steps:
+                if self.global_step >= total_steps:
                     break
         
         progress_bar.close()
         
         # Final save
-        self.save_checkpoint(global_step, final=True)
+        self.save_checkpoint(self.global_step, final=True)
     
     def evaluate(self) -> Dict[str, float]:
         """Evaluate model"""
@@ -242,7 +271,8 @@ class NeuralFlexTrainer:
             return
         
         save_dir = f"{self.output_dir}/checkpoint-{step}" if not final else f"{self.output_dir}/final"
-        
+        os.makedirs(save_dir, exist_ok=True)
+
         self.accelerator.wait_for_everyone()
         unwrapped_model = self.accelerator.unwrap_model(self.model)
         
@@ -250,7 +280,8 @@ class NeuralFlexTrainer:
         unwrapped_model.save_pretrained(save_dir)
         self.tokenizer.save_pretrained(save_dir)
         
-        # Save optimizer and scheduler
+        # Save optimizer, scheduler, and accelerator state
+        self.accelerator.save_state(os.path.join(save_dir, "accelerator_state"))
         torch.save({
             'optimizer': self.optimizer.state_dict(),
             'scheduler': self.scheduler.state_dict(),

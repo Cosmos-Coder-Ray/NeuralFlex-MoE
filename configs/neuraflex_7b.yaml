@@ -1,6 +1,7 @@
 # NeuralFlex-MoE 7B Configuration
 
-model:
+# Configuration for the model architecture itself
+model_config:
   model_name: "NeuralFlex-MoE-7B"
   architecture: "Hybrid-MoE-Transformer"
   base_hidden_size: 2048
@@ -8,15 +9,28 @@ model:
   num_key_value_heads: 8
   intermediate_size: 5632
   num_hidden_layers: 24
-  vocab_size: 65536
+  vocab_size: 32000 # Adjusted to be closer to standard tokenizers like Llama
   max_position_embeddings: 32768
   rope_theta: 500000.0
   sliding_window: 4096
   num_experts: 16
   num_experts_per_tok: 2
   expert_capacity_factor: 1.25
+  
+  # Adaptive Reasoning Chain (TRM-inspired)
+  arc_steps: 5
+  arc_dropout: 0.1
 
-training:
+# Configuration for the training process
+training_config:
+  output_dir: "./outputs/neuraflex-7b"
+  tokenizer_name: "meta-llama/Llama-2-7b-hf"
+  
+  # Datasets
+  train_dataset: "openhermes"
+  eval_dataset: "gsm8k"
+
+  # Core training parameters
   strategy: "FSDP"
   gradient_checkpointing: true
   mixed_precision: "bf16"
@@ -32,37 +46,22 @@ training:
   max_grad_norm: 1.0
   lr_scheduler_type: "cosine"
 
-novel_features:
-  self_organizing_pathways:
-    enabled: true
+  # Weight Transfer from a base model
+  use_weight_transfer: true
+  source_model_id: "mistralai/Mistral-7B-v0.1"
+
+  # Self-Organizing Neural Pathways (SONP)
+  sonp_enabled: true
+  sonp_update_frequency: 200 # Update pathways every 200 steps
+  sonp_config:
     pathway_threshold: 0.01
     pruning_rate: 0.1
     growth_rate: 0.05
-  
-  temporal_context_compression:
-    enabled: true
-    compression_ratio: 10
-    memory_bank_size: 10000
-  
-  uncertainty_aware_generation:
-    enabled: true
-    uncertainty_threshold: 0.7
-    alternative_beams: 3
-  
-  continuous_learning:
-    enabled: true
-    experience_replay_size: 10000
-    ewc_lambda: 0.4
 
-data:
-  datasets:
-    - wikitext
-    - openwebtext
-    - github-code
-    - gsm8k
-  max_length: 32768
-  streaming: true
+  # MoE specific loss
+  moe_aux_loss_coeff: 0.01
 
+# Deployment settings (not used in training script)
 deployment:
   quantization: "4bit"
   use_flash_attention: true

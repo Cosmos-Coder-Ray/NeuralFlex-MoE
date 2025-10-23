@@ -88,3 +88,9 @@ temp/
 # Environment
 .env
 .env.local
+
+# Snyk Security Extension - AI Rules (auto-generated)
+.github\instructions\snyk_rules.instructions.md
+
+#dev-documentation
+Dev-docs/

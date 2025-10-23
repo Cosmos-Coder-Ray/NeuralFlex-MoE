@@ -1,139 +1,101 @@
-"""Dataset preparation script for NeuralFlex-MoE"""
-
-import yaml
-from datasets import load_dataset, concatenate_datasets, Dataset
-from transformers import AutoTokenizer
 import argparse
-from pathlib import Path
+from datasets import load_dataset
+import os
+from neuraflex_moe.utils.logging_utils import setup_logger
 
-def load_config(config_path="configs/dataset_config.yaml"):
-    with open(config_path) as f:
-        return yaml.safe_load(f)
+# A mapping of friendly names to Hugging Face dataset identifiers and configurations
+DATASET_REGISTRY = {
+    # Text & Code
+    "redpajama": ("togethercomputer/RedPajama-Data-1T", None),
+    "the_stack": ("bigcode/the-stack-v2", None),
+    "dolma": ("allenai/dolma", None),
+    "openhermes": ("teknium/OpenHermes-2.5", None),
+    "gsm8k": ("gsm8k", "main"),
+    "arc_challenge": ("ai2_arc", "ARC-Challenge"),
 
-def prepare_pretraining_data(config, tokenizer, max_samples=None):
-    """Load and prepare pretraining datasets"""
-    datasets = []
-    
-    print("Loading pretraining datasets...")
-    
-    # General knowledge
-    for ds_config in config['pretraining']['general_knowledge']:
-        try:
-            print(f"Loading {ds_config['name']}...")
-            if ds_config['name'] == 'Wikipedia':
-                ds = load_dataset(ds_config['source'], ds_config['config'], split='train')
-            else:
-                ds = load_dataset(ds_config['source'], split='train', streaming=True)
-                ds = ds.take(int(max_samples * ds_config['weight'])) if max_samples else ds
-            datasets.append(ds)
-        except Exception as e:
-            print(f"Warning: Could not load {ds_config['name']}: {e}")
-    
-    # Code datasets
-    for ds_config in config['pretraining']['code']:
-        try:
-            print(f"Loading {ds_config['name']}...")
-            ds = load_dataset(ds_config['source'], split='train', streaming=True)
-            ds = ds.take(int(max_samples * ds_config['weight'])) if max_samples else ds
-            datasets.append(ds)
-        except Exception as e:
-            print(f"Warning: Could not load {ds_config['name']}: {e}")
-    
-    return datasets
+    # Image-to-Text
+    "coco": ("HuggingFaceM4/COCO", None),
+    "textcaps": ("textcaps", None),
+    "visual_genome": ("visual_genome", "v1.2"),
 
-def prepare_finetuning_data(config, tokenizer):
-    """Load and prepare fine-tuning datasets"""
-    datasets = {}
-    
-    print("Loading fine-tuning datasets...")
-    
-    # Instruction following
-    datasets['instruction'] = []
-    for ds_config in config['finetuning']['instruction_following']:
-        try:
-            print(f"Loading {ds_config['name']}...")
-            ds = load_dataset(ds_config['source'], split='train')
-            datasets['instruction'].append(ds)
-        except Exception as e:
-            print(f"Warning: Could not load {ds_config['name']}: {e}")
-    
-    # Reasoning & CoT
-    datasets['reasoning'] = []
-    for ds_config in config['finetuning']['reasoning_cot']:
-        try:
-            print(f"Loading {ds_config['name']}...")
-            ds = load_dataset(ds_config['source'], split='train')
-            datasets['reasoning'].append(ds)
-        except Exception as e:
-            print(f"Warning: Could not load {ds_config['name']}: {e}")
-    
-    # Code generation
-    datasets['code'] = []
-    for ds_config in config['finetuning']['code_generation']:
-        try:
-            print(f"Loading {ds_config['name']}...")
-            ds = load_dataset(ds_config['source'], split='train')
-            datasets['code'].append(ds)
-        except Exception as e:
-            print(f"Warning: Could not load {ds_config['name']}: {e}")
-    
-    return datasets
-
-def prepare_evaluation_data(config):
-    """Load evaluation benchmarks"""
-    benchmarks = {}
-    
-    print("Loading evaluation benchmarks...")
-    
-    for bench_config in config['evaluation']:
-        try:
-            print(f"Loading {bench_config['name']}...")
-            if 'config' in bench_config:
-                ds = load_dataset(bench_config['source'], bench_config['config'])
-            else:
-                ds = load_dataset(bench_config['source'])
-            benchmarks[bench_config['name']] = ds
-        except Exception as e:
-            print(f"Warning: Could not load {bench_config['name']}: {e}")
-    
-    return benchmarks
+    # Audio-to-Text
+    "common_voice": ("mozilla-foundation/common_voice_11_0", "en"),
+    "librispeech": ("librispeech_asr", "clean"),
+    "fsd50k": ("fsd50k", None),
+}
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="configs/dataset_config.yaml")
-    parser.add_argument("--phase", choices=['pretrain', 'finetune', 'eval', 'all'], default='all')
-    parser.add_argument("--output_dir", default="./data")
-    parser.add_argument("--max_samples", type=int, default=None)
+    """
+    A utility script to download and cache datasets from Hugging Face.
+
+    This script simplifies the process of fetching the large datasets required
+    for training and fine-tuning NeuralFlex-MoE.
+    """
+    parser = argparse.ArgumentParser(description="Download and cache Hugging Face datasets.")
+    parser.add_argument(
+        "dataset_name",
+        type=str,
+        choices=list(DATASET_REGISTRY.keys()),
+        help=f"The friendly name of the dataset to download. Choose from: {list(DATASET_REGISTRY.keys())}"
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="./data/cached",
+        help="The directory to save the cached dataset."
+    )
+    parser.add_argument(
+        "--split",
+        type=str,
+        default=None,
+        help="Optional: The specific split to download (e.g., 'train', 'validation[:10%]')."
+    )
+    parser.add_argument(
+        "--streaming",
+        action="store_true",
+        help="If set, streams the dataset instead of downloading. Good for a quick preview."
+    )
+
     args = parser.parse_args()
-    
-    # Load config
-    config = load_config(args.config)
-    
-    # Load tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(config['base_model']['primary'])
-    
-    # Create output directory
-    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-    
-    # Prepare datasets based on phase
-    if args.phase in ['pretrain', 'all']:
-        pretrain_data = prepare_pretraining_data(config, tokenizer, args.max_samples)
-        print(f"Prepared {len(pretrain_data)} pretraining datasets")
-    
-    if args.phase in ['finetune', 'all']:
-        finetune_data = prepare_finetuning_data(config, tokenizer)
-        print(f"Prepared fine-tuning datasets: {list(finetune_data.keys())}")
-    
-    if args.phase in ['eval', 'all']:
-        eval_data = prepare_evaluation_data(config)
-        print(f"Prepared {len(eval_data)} evaluation benchmarks")
-    
-    print("\n✅ Dataset preparation complete!")
-    print(f"\nRecommended training schedule:")
-    for phase, details in config['training_schedule'].items():
-        print(f"\n{phase}:")
-        for key, value in details.items():
-            print(f"  {key}: {value}")
+    logger = setup_logger()
+
+    if args.dataset_name not in DATASET_REGISTRY:
+        logger.error(f"Dataset '{args.dataset_name}' not recognized. Please choose from the available options.")
+        return
+
+    hf_id, subset = DATASET_REGISTRY[args.dataset_name]
+    save_path = os.path.join(args.output_dir, args.dataset_name)
+
+    logger.info(f"Preparing to download dataset: '{args.dataset_name}'")
+    logger.info(f"Hugging Face ID: {hf_id}")
+    if subset:
+        logger.info(f"Subset: {subset}")
+    logger.info(f"Output directory: {save_path}")
+
+    try:
+        dataset = load_dataset(
+            hf_id,
+            name=subset,
+            split=args.split,
+            streaming=args.streaming,
+            cache_dir=os.path.join(args.output_dir, ".cache") # Centralize cache
+        )
+
+        if args.streaming:
+            logger.info("Streaming dataset. Taking the first 100 examples for preview.")
+            for example in dataset.take(100):
+                print(example)
+            logger.info("Streaming preview complete.")
+        else:
+            logger.info(f"Downloading and caching dataset to disk...")
+            dataset.save_to_disk(save_path)
+            logger.info(f"Dataset successfully saved to: {save_path}")
+
+    except Exception as e:
+        logger.error(f"Failed to download or process dataset '{args.dataset_name}'. Error: {e}")
+        logger.error(
+            "Please check the dataset name, your internet connection, and available disk space."
+        )
 
 if __name__ == "__main__":
     main()

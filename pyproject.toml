@@ -12,7 +12,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "NeuralFlex Team"}
+    {name = "RISHI TIWARI"}
 ]
 keywords = ["llm", "moe", "transformer", "ai", "machine-learning"]
 classifiers = [

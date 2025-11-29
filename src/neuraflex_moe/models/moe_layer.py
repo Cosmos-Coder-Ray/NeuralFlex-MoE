@@ -71,6 +71,7 @@ class MoELayer(nn.Module):
 
         # SONP: Self-Organizing Neural Pathways
         self.register_buffer("expert_usage", torch.zeros(self.num_experts))
+        self.register_buffer("active_experts_mask", torch.ones(self.num_experts, dtype=torch.bool))
         
     def forward(self, hidden_states: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         batch_size, seq_len, hidden_dim = hidden_states.shape
@@ -86,6 +87,10 @@ class MoELayer(nn.Module):
         final_output = torch.zeros_like(hidden_states_flat)
         
         for expert_idx in range(self.num_experts):
+            # Skip if expert is pruned
+            if not self.active_experts_mask[expert_idx]:
+                continue
+
             expert = self.experts[expert_idx]
             
             expert_mask = (selected_experts == expert_idx).any(dim=-1)
@@ -125,7 +130,12 @@ class MoELayer(nn.Module):
 
         if experts_to_prune.numel() > 0:
             print(f"Pruning {experts_to_prune.numel()} experts: {experts_to_prune.tolist()}")
-            # In a real implementation, you would re-initialize the pruned experts
-            # or replace them with copies of more frequently used experts.
-            # For now, we will just reset their usage count.
-            self.expert_usage[experts_to_prune] = 0
+            
+            # Deactivate the pruned experts
+            if experts_to_prune.dim() == 0:
+                self.active_experts_mask[experts_to_prune] = False
+            else:
+                self.active_experts_mask[experts_to_prune] = False
+            
+            # Reset usage for next round
+            self.expert_usage.zero_()
